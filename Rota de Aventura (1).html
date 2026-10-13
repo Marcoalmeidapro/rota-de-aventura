@@ -1,0 +1,582 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Rota de Aventura</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: cinco marcos de trilha no topo (a ordem é real) e uma etapa por vez numa coluna de 44rem. */
+:root {
+  --bg: #e9efed;
+  --surface: #f7faf9;
+  --ink: #13262a;
+  --muted: #485f63;
+  --line: #c3d2cf;
+  --accent: #0e6a5b;
+  --accent-ink: #ffffff;
+  --accent-soft: #d3e7e2;
+  --good: #1a7a48;
+  --good-soft: #d4ecdd;
+  --warn: #8a5f00;
+  --warn-soft: #f4e6bd;
+  --bad: #ab3427;
+  --bad-soft: #f3d6d1;
+  --font-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --font-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1a1c; --surface: #162528; --ink: #e3eeec; --muted: #9bb0ad; --line: #2b4044;
+    --accent: #4cc4a8; --accent-ink: #08201b; --accent-soft: #1b3a37;
+    --good: #5bd08e; --good-soft: #1a3a2a; --warn: #e3b341; --warn-soft: #3b3115;
+    --bad: #f0867a; --bad-soft: #43211d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1a1c; --surface: #162528; --ink: #e3eeec; --muted: #9bb0ad; --line: #2b4044;
+  --accent: #4cc4a8; --accent-ink: #08201b; --accent-soft: #1b3a37;
+  --good: #5bd08e; --good-soft: #1a3a2a; --warn: #e3b341; --warn-soft: #3b3115;
+  --bad: #f0867a; --bad-soft: #43211d; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-inline: 16px; padding-block: 24px 56px;
+}
+.wrap { max-width: 44rem; margin-inline: auto; display: flex; flex-direction: column; gap: 24px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.05; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.6rem, 9vw, 3.8rem); letter-spacing: 0.01em; text-transform: uppercase; }
+h2 { font-size: 1.9rem; text-transform: uppercase; letter-spacing: 0.02em; }
+p { margin: 0; max-width: 65ch; }
+.label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+/* Cabeçalho */
+.hero { position: relative; display: flex; flex-direction: column; gap: 14px; padding-block: 8px 4px; overflow: hidden; }
+.contours { position: absolute; right: -40px; top: -20px; width: 300px; height: 190px; color: var(--accent); opacity: 0.22; pointer-events: none; }
+.hero > * { position: relative; }
+.hero p { color: var(--muted); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 6px; flex: 1 1 14rem; min-width: 0; }
+.field label { font-weight: 600; font-size: 0.92rem; }
+input[type="text"], textarea, select {
+  width: 100%; font: inherit; color: var(--ink); background: var(--surface);
+  border: 1.5px solid var(--line); border-radius: 6px; padding: 10px 12px;
+}
+textarea { min-height: 5.5rem; resize: vertical; line-height: 1.45; }
+input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+
+/* Marcos de trilha */
+.trail { overflow-x: auto; padding-block: 4px 8px; margin-inline: -4px; padding-inline: 4px; }
+.trail ol { list-style: none; margin: 0; padding: 0; display: flex; min-width: 34rem; }
+.trail li { flex: 1 1 0; position: relative; }
+.trail li + li::before { content: ""; position: absolute; top: 19px; left: -50%; width: 100%; height: 3px; background: var(--line); }
+.trail li.done + li::before, .trail li.done + li.current::before { background: var(--accent); }
+.mark {
+  position: relative; z-index: 1; width: 100%; background: none; border: 0; padding: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--muted); font: inherit;
+}
+.mark .dot {
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 700; font-size: 1.25rem;
+  background: var(--surface); border: 2.5px solid var(--line); color: var(--muted);
+}
+.mark .name { font-size: 0.8rem; font-weight: 600; text-align: center; line-height: 1.2; max-width: 7.5rem; }
+li.done .dot { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+li.current .dot { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+li.current.done .dot { color: var(--accent-ink); }
+li.current .name { color: var(--ink); }
+
+/* Etapas */
+.step { display: flex; flex-direction: column; gap: 20px; }
+.step[hidden] { display: none; }
+.head { display: flex; flex-direction: column; gap: 8px; }
+.head p { color: var(--muted); }
+.panel { background: var(--surface); border: 1.5px solid var(--line); border-radius: 8px; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.btn {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 6px; padding: 11px 18px;
+  border: 2px solid var(--accent); background: var(--accent); color: var(--accent-ink); text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:hover { filter: brightness(1.08); }
+.nav { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; }
+.score { font-family: var(--font-mono); font-size: 0.85rem; background: var(--accent-soft); color: var(--ink); border-radius: 4px; padding: 4px 10px; align-self: flex-start; }
+
+/* Quiz e situações */
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+legend { padding: 0; font-weight: 600; margin-bottom: 8px; }
+legend .qn { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 2px; letter-spacing: 0.08em; }
+.opts { display: flex; flex-direction: column; gap: 8px; }
+.opt {
+  font: inherit; text-align: left; cursor: pointer; color: var(--ink); background: var(--bg);
+  border: 1.5px solid var(--line); border-radius: 6px; padding: 10px 12px; min-width: 0;
+}
+.opt:hover:not([disabled]) { border-color: var(--accent); }
+.opt[disabled] { cursor: default; }
+.opt.right { background: var(--good-soft); border-color: var(--good); }
+.opt.wrong { background: var(--bad-soft); border-color: var(--bad); }
+.fb { font-size: 0.93rem; padding: 10px 12px; border-radius: 6px; background: var(--accent-soft); }
+.fb strong { font-weight: 600; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 440px) { .two { grid-template-columns: 1fr; } }
+.q { padding-bottom: 16px; border-bottom: 1px dashed var(--line); }
+.q:last-child { border-bottom: 0; padding-bottom: 0; }
+
+/* Montagem */
+.risk { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pips { display: flex; gap: 4px; }
+.pip { width: 22px; height: 10px; border-radius: 2px; background: var(--line); }
+.pip.on { background: var(--warn); }
+.info { background: var(--bg); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 0.95rem; }
+.checks { display: flex; flex-direction: column; gap: 6px; }
+.check { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 6px; cursor: pointer; border: 1.5px solid transparent; }
+.check:hover { background: var(--bg); }
+.check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+.check .ess { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; color: var(--warn); text-transform: uppercase; margin-left: 6px; }
+.meter { display: flex; flex-direction: column; gap: 8px; }
+.bar { height: 12px; background: var(--line); border-radius: 6px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.25s ease; }
+.status { padding: 10px 12px; border-radius: 6px; font-weight: 600; }
+.status.ok { background: var(--good-soft); }
+.status.mid { background: var(--warn-soft); }
+.status.low { background: var(--bad-soft); }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+
+/* Ficha */
+.tally { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 10px; }
+.tile { background: var(--bg); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.tile b { font-family: var(--font-display); font-size: 2rem; line-height: 1; }
+.sheet { font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.6; min-height: 18rem; white-space: pre-wrap; }
+.hint { color: var(--muted); font-size: 0.9rem; }
+.toast { font-size: 0.9rem; color: var(--good); font-weight: 600; min-height: 1.4em; }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <svg class="contours" viewBox="0 0 300 190" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <path d="M10 150 C60 110 90 140 140 100 S230 60 290 90"/>
+      <path d="M10 130 C60 90 95 120 140 82 S228 42 290 72"/>
+      <path d="M20 110 C65 72 100 100 142 66 S226 28 290 54"/>
+      <path d="M40 90 C75 56 108 82 146 52 S222 16 288 38"/>
+      <path d="M70 70 C96 44 122 64 152 40 S214 8 280 22"/>
+    </svg>
+    <span class="label">Educação Física · Ensino Médio</span>
+    <h1>Rota de Aventura</h1>
+    <p>Atividade para fazer sozinho ou em grupo, sem precisar do professor. Leva cerca de 40 minutos. Suas respostas ficam salvas neste aparelho enquanto você avança.</p>
+    <div class="row">
+      <div class="field"><label for="nome">Nome (ou nomes do grupo)</label><input type="text" id="nome" data-save autocomplete="off"></div>
+      <div class="field"><label for="turma">Turma</label><input type="text" id="turma" data-save autocomplete="off"></div>
+    </div>
+  </header>
+
+  <nav class="trail" aria-label="Etapas da atividade">
+    <ol id="trail"></ol>
+  </nav>
+
+  <main id="main">
+    <!-- 1 -->
+    <section class="step" id="s0">
+      <div class="head">
+        <span class="label">Marco 1</span>
+        <h2>Vídeo e anotações</h2>
+        <p>Abra o vídeo, assista inteiro e anote o que perceber. Se perder algo, volte o vídeo. Depois volte para esta página.</p>
+      </div>
+      <div class="panel">
+        <div><a class="btn" href="https://www.youtube.com/watch?v=gA3SZ4k-nGI&amp;t=104s" target="_blank" rel="noopener">Abrir o vídeo em nova aba</a></div>
+        <div class="field"><label for="n1">Quais práticas de aventura aparecem?</label><textarea id="n1" data-save></textarea></div>
+        <div class="field"><label for="n2">Quais riscos você percebeu?</label><textarea id="n2" data-save></textarea></div>
+        <div class="field"><label for="n3">Que equipamentos e cuidados aparecem?</label><textarea id="n3" data-save></textarea></div>
+        <div class="field"><label for="n4">Onde acontecem: natureza, cidade ou espaço adaptado?</label><textarea id="n4" data-save></textarea></div>
+      </div>
+      <div class="nav"><span></span><button class="btn" data-go="1">Próximo: quiz</button></div>
+    </section>
+
+    <!-- 2 -->
+    <section class="step" id="s1" hidden>
+      <div class="head">
+        <span class="label">Marco 2</span>
+        <h2>Quiz rápido</h2>
+        <p>Escolha uma alternativa. A resposta aparece na hora, com a explicação. Cada pergunta só aceita uma tentativa.</p>
+        <span class="score" id="quizScore"></span>
+      </div>
+      <div class="panel" id="quiz"></div>
+      <div class="nav"><button class="btn ghost" data-go="0">Voltar</button><button class="btn" data-go="2">Próximo: situações</button></div>
+    </section>
+
+    <!-- 3 -->
+    <section class="step" id="s2" hidden>
+      <div class="head">
+        <span class="label">Marco 3</span>
+        <h2>Aventura ou imprudência?</h2>
+        <p>Em cada situação, decida se é uma aventura planejada ou uma imprudência. O que conta é o risco estar conhecido e controlado.</p>
+        <span class="score" id="clsScore"></span>
+      </div>
+      <div class="panel" id="cls"></div>
+      <div class="nav"><button class="btn ghost" data-go="1">Voltar</button><button class="btn" data-go="3">Próximo: monte sua prática</button></div>
+    </section>
+
+    <!-- 4 -->
+    <section class="step" id="s3" hidden>
+      <div class="head">
+        <span class="label">Marco 4</span>
+        <h2>Monte sua prática</h2>
+        <p>Escolha uma prática que daria para fazer com segurança perto de você e marque os cuidados que o seu grupo garantiria.</p>
+      </div>
+      <div class="panel">
+        <div class="row">
+          <div class="field"><label for="practice">Prática</label>
+            <select id="practice" data-save><option value="">Escolha uma prática</option></select></div>
+          <div class="field"><label for="where">Onde seria feita</label>
+            <select id="where" data-save>
+              <option value="">Escolha um local</option>
+              <option>Quadra ou pátio da escola</option>
+              <option>Praça ou parque do bairro</option>
+              <option>Ciclovia ou rua fechada ao trânsito</option>
+            </select></div>
+        </div>
+        <div class="info" id="pinfo" hidden></div>
+      </div>
+      <div class="panel">
+        <h3>Cuidados do grupo</h3>
+        <p class="hint">Os itens com <span class="ess" style="font-family:var(--font-mono);font-size:.7rem;letter-spacing:.08em;color:var(--warn);text-transform:uppercase">essencial</span> não podem faltar.</p>
+        <div class="checks" id="checks"></div>
+        <div class="meter">
+          <div class="label" id="meterLabel"></div>
+          <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="9" id="barWrap"><i id="bar"></i></div>
+          <div class="status" id="status"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="field"><label for="access">Como deixar essa prática mais acessível e barata para quem tem menos recursos?</label><textarea id="access" data-save></textarea></div>
+        <div class="field"><label for="rule">Qual seria a regra mais importante do grupo?</label><textarea id="rule" data-save></textarea></div>
+      </div>
+      <div class="nav"><button class="btn ghost" data-go="2">Voltar</button><button class="btn" data-go="4">Próximo: ficha final</button></div>
+    </section>
+
+    <!-- 5 -->
+    <section class="step" id="s4" hidden>
+      <div class="head">
+        <span class="label">Marco 5</span>
+        <h2>Ficha final</h2>
+        <p>Confira seus resultados, escreva sua conclusão e copie a ficha. Mostre esta tela ao professor, cole a ficha no caderno ou envie pelo canal de entrega combinado com a turma.</p>
+      </div>
+      <div class="panel">
+        <div class="tally">
+          <div class="tile"><span class="label">Quiz</span><b id="tQuiz">0/6</b></div>
+          <div class="tile"><span class="label">Situações</span><b id="tCls">0/8</b></div>
+          <div class="tile"><span class="label">Cuidados</span><b id="tChk">0/9</b></div>
+        </div>
+        <div class="field"><label for="refl">Em duas ou três frases: o que você aprendeu sobre aventura e segurança?</label><textarea id="refl" data-save></textarea></div>
+      </div>
+      <div class="panel">
+        <div class="field"><label for="sheet">Ficha para copiar</label><textarea id="sheet" class="sheet" readonly></textarea></div>
+        <div class="row" style="align-items:center">
+          <button class="btn" id="copy">Copiar ficha</button>
+          <button class="btn ghost" id="reset">Apagar tudo e recomeçar</button>
+        </div>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
+      <div class="nav"><button class="btn ghost" data-go="3">Voltar</button><span></span></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  var STEPS = ["Vídeo", "Quiz", "Aventura ou imprudência", "Monte sua prática", "Ficha final"];
+
+  var QUIZ = [
+    { q: "Qual destas é uma prática de aventura urbana?", o: ["Rapel em cachoeira", "Parkour", "Rafting", "Mergulho"], a: 1,
+      e: "O parkour usa muros, bancos e escadas da cidade. As outras três acontecem na natureza." },
+    { q: "Para que serve o EPI (equipamento de proteção individual)?", o: ["Deixar a prática mais emocionante", "Reduzir o risco de lesões", "Substituir o planejamento", "Mostrar o nível do praticante"], a: 1,
+      e: "Capacete, joelheira e colete reduzem o dano de uma queda, mas não substituem preparo e planejamento." },
+    { q: "O que diferencia aventura de imprudência?", o: ["A velocidade da atividade", "O risco ser conhecido, calculado e controlado", "A idade de quem pratica", "O local onde acontece"], a: 1,
+      e: "Na aventura planejada você sabe os riscos e tem meios de controlá-los. Na imprudência o risco é ignorado." },
+    { q: "Qual é o primeiro passo antes de qualquer prática de aventura?", o: ["Comprar equipamento caro", "Gravar um vídeo para as redes", "Avaliar local, clima e nível do grupo e planejar", "Começar pelo movimento mais difícil"], a: 2,
+      e: "Planejar vem antes de tudo: condições do local, previsão do tempo e o preparo de cada pessoa." },
+    { q: "O princípio do mínimo impacto diz que devemos...", o: ["Levar o lixo de volta e preservar o ambiente", "Abrir novos caminhos para outros seguirem", "Deixar marcas para facilitar a volta", "Usar o espaço sem regras"], a: 0,
+      e: "Quem pratica deve deixar o lugar como encontrou: sem lixo, sem danos à vegetação e sem incomodar outros usuários." },
+    { q: "Qual destas é uma barreira de acesso às práticas de aventura?", o: ["Custo dos equipamentos e falta de espaços públicos adequados", "Excesso de espaços gratuitos", "Pouco interesse dos jovens por esporte", "Clima sempre favorável"], a: 0,
+      e: "Equipamentos caros, transporte e poucos locais seguros deixam essas práticas distantes de muita gente." }
+  ];
+
+  var SITS = [
+    { t: "Fazer uma trilha levando mapa e água, e avisando a família sobre o roteiro.", a: "A", e: "Há planejamento, preparo e alguém sabe onde você está." },
+    { t: "Escalar sem corda e sem instrutor porque \"parece fácil\".", a: "I", e: "O risco de queda grave foi ignorado e não há nenhum controle." },
+    { t: "Descer de skate em rua movimentada, sem proteção e sem avisar ninguém.", a: "I", e: "O trânsito e a falta de EPI tornam o risco alto e sem controle." },
+    { t: "Treinar parkour em espaço adequado, com aquecimento e proteção para quedas.", a: "A", e: "O local é apropriado, o corpo é preparado e as quedas são tratadas." },
+    { t: "Fazer rapel com instrutor habilitado, capacete e checagem do equipamento.", a: "A", e: "Cada risco tem uma medida de controle e uma pessoa preparada responsável." },
+    { t: "Entrar em corredeira de rio sem colete salva-vidas porque \"sabe nadar\".", a: "I", e: "Saber nadar não protege em corredeira. O colete é item essencial." },
+    { t: "Seguir para a trilha mesmo com previsão de tempestade, para \"aproveitar o dia\".", a: "I", e: "Conferir o clima faz parte do planejamento. Ignorar o aviso é imprudência." },
+    { t: "Pular de uma pedra na água sem conhecer a profundidade do local.", a: "I", e: "Sem saber a profundidade, o risco de lesão grave é imprevisível." }
+  ];
+
+  var PRACTICES = [
+    { id: "Patinação", risk: 3, gear: "Capacete, joelheiras, cotoveleiras e munhequeiras.", note: "Piso liso e sem buracos. Começar aprendendo a frear e a cair." },
+    { id: "Slackline baixo (até 40 cm do chão)", risk: 2, gear: "Fita bem ancorada, árvores ou postes protegidos e área livre embaixo.", note: "Altura baixa e sem obstáculos no chão. Nunca montar em altura sem profissional." },
+    { id: "Parkour básico (movimentos no solo)", risk: 3, gear: "Tênis com boa aderência e colchonetes para treinar quedas.", note: "Só movimentos de rolamento, equilíbrio e salto baixo. Progressão lenta." },
+    { id: "Corrida de orientação", risk: 2, gear: "Mapa do local, bússola e apito para emergências.", note: "Percurso definido em área fechada e com horário combinado de retorno." },
+    { id: "Trilha em parque ou área verde", risk: 2, gear: "Calçado fechado, água, protetor solar e mapa do trajeto.", note: "Trajeto conhecido, grupo unido e alguém que sabe o roteiro." },
+    { id: "Ciclismo em ciclovia", risk: 3, gear: "Capacete, luzes e refletores, e bicicleta revisada.", note: "Preferir ciclovia segregada e conhecer as regras de trânsito." }
+  ];
+
+  var CHECKS = [
+    { t: "Professor ou condutor habilitado acompanha a prática", ess: true },
+    { t: "EPI adequado para todos, no tamanho certo", ess: true },
+    { t: "Local vistoriado antes (piso, obstáculos, trânsito)", ess: true },
+    { t: "Aquecimento e alongamento antes de começar" },
+    { t: "Autorização dos responsáveis para menores de 18 anos" },
+    { t: "Plano de emergência e kit de primeiros socorros" },
+    { t: "Regras escritas e combinadas com o grupo" },
+    { t: "Previsão do tempo conferida" },
+    { t: "Mínimo impacto: lixo recolhido e respeito aos outros usuários" }
+  ];
+
+  var KEY = "rota-aventura-v1";
+  var S = { step: 0, f: {}, quiz: {}, cls: {}, checks: {} };
+
+  function load() { try { var r = localStorage.getItem(KEY); if (r) { var p = JSON.parse(r); S = Object.assign(S, p); } } catch (e) {} }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+  /* ---------- Marcos ---------- */
+  function quizDone() { return Object.keys(S.quiz).length === QUIZ.length; }
+  function clsDone() { return Object.keys(S.cls).length === SITS.length; }
+  function isDone(i) {
+    if (i === 0) return ["n1", "n2", "n3", "n4"].some(function (k) { return (S.f[k] || "").trim(); });
+    if (i === 1) return quizDone();
+    if (i === 2) return clsDone();
+    if (i === 3) return !!S.f.practice;
+    if (i === 4) return !!(S.f.refl || "").trim();
+    return false;
+  }
+  function renderTrail() {
+    var ol = $("trail"); ol.textContent = "";
+    STEPS.forEach(function (name, i) {
+      var li = el("li", (isDone(i) ? "done " : "") + (i === S.step ? "current" : ""));
+      var b = el("button", "mark");
+      b.type = "button"; b.dataset.go = i;
+      if (i === S.step) b.setAttribute("aria-current", "step");
+      var dot = el("span", "dot", isDone(i) ? "✓" : String(i + 1));
+      b.appendChild(dot); b.appendChild(el("span", "name", name));
+      li.appendChild(b); ol.appendChild(li);
+    });
+  }
+  function show(n, scroll) {
+    S.step = n;
+    for (var i = 0; i < STEPS.length; i++) $("s" + i).hidden = i !== n;
+    if (n === 4) renderFinal();
+    renderTrail(); save();
+    if (scroll) {
+      var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      try { $("trail").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }); } catch (e) { window.scrollTo(0, 0); }
+    }
+  }
+
+  /* ---------- Quiz ---------- */
+  function renderQuiz() {
+    var box = $("quiz"); box.textContent = "";
+    var hits = 0;
+    QUIZ.forEach(function (it, qi) {
+      var fs = el("fieldset", "q");
+      var lg = el("legend"); lg.appendChild(el("span", "qn", "PERGUNTA " + (qi + 1) + " DE " + QUIZ.length)); lg.appendChild(document.createTextNode(it.q));
+      fs.appendChild(lg);
+      var opts = el("div", "opts");
+      var chosen = S.quiz[qi];
+      it.o.forEach(function (txt, oi) {
+        var b = el("button", "opt", txt); b.type = "button"; b.dataset.q = qi; b.dataset.o = oi;
+        if (chosen !== undefined) {
+          b.disabled = true;
+          if (oi === it.a) b.classList.add("right");
+          else if (oi === chosen) b.classList.add("wrong");
+        }
+        opts.appendChild(b);
+      });
+      fs.appendChild(opts);
+      if (chosen !== undefined) {
+        if (chosen === it.a) hits++;
+        var fb = el("div", "fb"); fb.setAttribute("role", "status");
+        fb.appendChild(el("strong", null, chosen === it.a ? "Correto. " : "Não foi dessa vez. "));
+        fb.appendChild(document.createTextNode(it.e)); fs.appendChild(fb);
+      }
+      box.appendChild(fs);
+    });
+    $("quizScore").textContent = "Acertos: " + hits + " de " + QUIZ.length;
+    return hits;
+  }
+
+  /* ---------- Situações ---------- */
+  function renderCls() {
+    var box = $("cls"); box.textContent = "";
+    var hits = 0;
+    SITS.forEach(function (it, i) {
+      var fs = el("fieldset", "q");
+      var lg = el("legend"); lg.appendChild(el("span", "qn", "SITUAÇÃO " + (i + 1) + " DE " + SITS.length)); lg.appendChild(document.createTextNode(it.t));
+      fs.appendChild(lg);
+      var two = el("div", "two");
+      var chosen = S.cls[i];
+      [["A", "Aventura planejada"], ["I", "Imprudência"]].forEach(function (p) {
+        var b = el("button", "opt", p[1]); b.type = "button"; b.dataset.s = i; b.dataset.v = p[0];
+        if (chosen !== undefined) {
+          b.disabled = true;
+          if (p[0] === it.a) b.classList.add("right");
+          else if (p[0] === chosen) b.classList.add("wrong");
+        }
+        two.appendChild(b);
+      });
+      fs.appendChild(two);
+      if (chosen !== undefined) {
+        if (chosen === it.a) hits++;
+        var fb = el("div", "fb"); fb.setAttribute("role", "status");
+        fb.appendChild(el("strong", null, chosen === it.a ? "Isso mesmo. " : "Releia com atenção. "));
+        fb.appendChild(document.createTextNode(it.e)); fs.appendChild(fb);
+      }
+      box.appendChild(fs);
+    });
+    $("clsScore").textContent = "Acertos: " + hits + " de " + SITS.length;
+    return hits;
+  }
+
+  /* ---------- Montagem ---------- */
+  function checkedCount() { return CHECKS.reduce(function (n, c, i) { return n + (S.checks[i] ? 1 : 0); }, 0); }
+  function renderChecks() {
+    var box = $("checks"); box.textContent = "";
+    CHECKS.forEach(function (c, i) {
+      var lab = el("label", "check"); lab.htmlFor = "ck" + i;
+      var cb = el("input"); cb.type = "checkbox"; cb.id = "ck" + i; cb.dataset.ck = i; cb.checked = !!S.checks[i];
+      var span = el("span"); span.appendChild(document.createTextNode(c.t));
+      if (c.ess) span.appendChild(el("span", "ess", "essencial"));
+      lab.appendChild(cb); lab.appendChild(span); box.appendChild(lab);
+    });
+    updateMeter();
+  }
+  function updateMeter() {
+    var n = checkedCount();
+    $("meterLabel").textContent = "Cuidados garantidos: " + n + " de " + CHECKS.length;
+    $("bar").style.width = Math.round(n / CHECKS.length * 100) + "%";
+    $("barWrap").setAttribute("aria-valuenow", n);
+    var essMissing = CHECKS.some(function (c, i) { return c.ess && !S.checks[i]; });
+    var st = $("status");
+    if (n === 0) { st.className = "status low"; st.textContent = "Ainda não está pronto para sair. Comece pelos itens essenciais."; }
+    else if (essMissing) { st.className = "status low"; st.textContent = "Faltam itens essenciais. Sem eles a prática não deve acontecer."; }
+    else if (n < 7) { st.className = "status mid"; st.textContent = "Os essenciais estão garantidos. Faltam cuidados para fechar o plano."; }
+    else { st.className = "status ok"; st.textContent = "Plano completo e pronto para apresentar."; }
+  }
+  function renderPractice() {
+    var info = $("pinfo"); var p = PRACTICES.filter(function (x) { return x.id === S.f.practice; })[0];
+    if (!p) { info.hidden = true; return; }
+    info.hidden = false; info.textContent = "";
+    var r = el("div", "risk"); r.appendChild(el("span", "label", "Grau de risco base (1 a 5)"));
+    var pips = el("div", "pips"); for (var i = 1; i <= 5; i++) pips.appendChild(el("span", "pip" + (i <= p.risk ? " on" : "")));
+    r.appendChild(pips); r.appendChild(el("span", "label", "Grau " + p.risk)); info.appendChild(r);
+    var g = el("div"); g.appendChild(el("strong", null, "EPI e material: ")); g.appendChild(document.createTextNode(p.gear)); info.appendChild(g);
+    var n = el("div"); n.appendChild(el("strong", null, "Cuidado típico: ")); n.appendChild(document.createTextNode(p.note)); info.appendChild(n);
+  }
+
+  /* ---------- Ficha ---------- */
+  function buildSheet() {
+    var f = S.f, L = [];
+    var qh = Object.keys(S.quiz).filter(function (k) { return S.quiz[k] === QUIZ[k].a; }).length;
+    var ch = Object.keys(S.cls).filter(function (k) { return S.cls[k] === SITS[k].a; }).length;
+    function v(x) { return (x || "").trim() || "(não respondido)"; }
+    L.push("ROTA DE AVENTURA · FICHA FINAL");
+    L.push("Nome: " + v(f.nome) + "   Turma: " + v(f.turma));
+    L.push("");
+    L.push("Resultados");
+    L.push("Quiz: " + qh + "/" + QUIZ.length + " · Situações: " + ch + "/" + SITS.length + " · Cuidados: " + checkedCount() + "/" + CHECKS.length);
+    L.push("");
+    L.push("Anotações do vídeo");
+    L.push("Práticas: " + v(f.n1));
+    L.push("Riscos: " + v(f.n2));
+    L.push("Equipamentos e cuidados: " + v(f.n3));
+    L.push("Cenário: " + v(f.n4));
+    L.push("");
+    L.push("Minha proposta");
+    L.push("Prática: " + v(f.practice));
+    L.push("Local: " + v(f.where));
+    var marked = CHECKS.filter(function (c, i) { return S.checks[i]; }).map(function (c) { return "- " + c.t; });
+    L.push("Cuidados marcados:" + (marked.length ? "\n" + marked.join("\n") : " nenhum"));
+    L.push("Acessibilidade: " + v(f.access));
+    L.push("Regra principal: " + v(f.rule));
+    L.push("");
+    L.push("O que aprendi");
+    L.push(v(f.refl));
+    return { text: L.join("\n"), qh: qh, ch: ch };
+  }
+  function renderFinal() {
+    var r = buildSheet();
+    $("tQuiz").textContent = r.qh + "/" + QUIZ.length;
+    $("tCls").textContent = r.ch + "/" + SITS.length;
+    $("tChk").textContent = checkedCount() + "/" + CHECKS.length;
+    $("sheet").value = r.text;
+  }
+
+  /* ---------- Eventos ---------- */
+  function applyFields() {
+    document.querySelectorAll("[data-save]").forEach(function (n) { if (S.f[n.id] != null) n.value = S.f[n.id]; });
+  }
+  function init() {
+    load();
+    var sel = $("practice");
+    PRACTICES.forEach(function (p) { var o = el("option", null, p.id); o.value = p.id; sel.appendChild(o); });
+    applyFields(); renderQuiz(); renderCls(); renderChecks(); renderPractice();
+    show(Math.min(Math.max(S.step || 0, 0), STEPS.length - 1), false);
+  }
+
+  document.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t.matches && t.matches("[data-save]")) {
+      S.f[t.id] = t.value; save();
+      if (t.id === "practice") renderPractice();
+      if (t.id === "refl" || t.id === "nome" || t.id === "turma") renderTrail();
+      if (S.step === 4) renderFinal();
+    }
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.matches && t.matches("[data-save]") && t.tagName === "SELECT") { S.f[t.id] = t.value; save(); renderPractice(); renderTrail(); }
+    if (t.dataset && t.dataset.ck != null) { S.checks[t.dataset.ck] = t.checked; save(); updateMeter(); }
+  });
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest ? e.target.closest("button, a") : null;
+    if (!t) return;
+    if (t.dataset.go != null) { show(parseInt(t.dataset.go, 10), true); return; }
+    if (t.dataset.q != null && S.quiz[t.dataset.q] === undefined) {
+      S.quiz[t.dataset.q] = parseInt(t.dataset.o, 10); save(); renderQuiz(); renderTrail(); return;
+    }
+    if (t.dataset.s != null && S.cls[t.dataset.s] === undefined) {
+      S.cls[t.dataset.s] = t.dataset.v; save(); renderCls(); renderTrail(); return;
+    }
+    if (t.id === "copy") {
+      var ta = $("sheet"), toast = $("toast");
+      function ok() { toast.textContent = "Ficha copiada."; }
+      function fallback() { ta.focus(); ta.select(); toast.textContent = "Texto selecionado. Use Ctrl+C (ou Copiar) para copiar."; }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(ok, fallback);
+        else fallback();
+      } catch (err) { fallback(); }
+      return;
+    }
+    if (t.id === "reset") {
+      if (t.dataset.armed !== "1") {
+        t.dataset.armed = "1"; t.textContent = "Toque de novo para confirmar";
+        setTimeout(function () { t.dataset.armed = ""; t.textContent = "Apagar tudo e recomeçar"; }, 4000);
+        return;
+      }
+      S = { step: 0, f: {}, quiz: {}, cls: {}, checks: {} }; save();
+      document.querySelectorAll("[data-save]").forEach(function (n) { n.value = ""; });
+      renderQuiz(); renderCls(); renderChecks(); renderPractice(); $("toast").textContent = "";
+      t.dataset.armed = ""; t.textContent = "Apagar tudo e recomeçar";
+      show(0, true);
+    }
+  });
+
+  init();
+})();
+</script>
+
+</body></html>
